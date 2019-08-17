@@ -66,7 +66,7 @@ export const getFirstUpperChar = (char) => char.charAt(0).toUpperCase()
 
 export const getTemperaturesJSON = (name, inputs) => {
   if (!name) {
-    return false
+    return null
   }
 
   const newState = { ...inputs }
