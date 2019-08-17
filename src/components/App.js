@@ -9,17 +9,21 @@ import Task2 from './Task2'
 import Task3 from './Task3'
 import Task4 from './Task4'
 import history from '../utils/history'
+import { ContextProvider } from './Context'
+import { data } from '../mock-data'
 
 const App = () => (
-  <Router history={history}>
-    <Switch>
-      <Route exact path="/" component={Task1} />
-      <Route path="/task2" component={Task2} />
-      <Route path="/task3" component={Task3} />
-      <Route path="/task4" component={Task4} />
-      <Redirect to="/" />
-    </Switch>
-  </Router>
+  <ContextProvider value={data}>
+    <Router history={history}>
+      <Switch>
+        <Route exact path="/" component={Task1} />
+        <Route path="/task2" component={Task2} />
+        <Route path="/task3" component={Task3} />
+        <Route path="/task4" component={Task4} />
+        <Redirect to="/" />
+      </Switch>
+    </Router>
+  </ContextProvider>
 )
 
 export default App
