@@ -62,6 +62,8 @@ export const setTemperatures = (inputs, setInputs) => {
   }
 }
 
+export const getFirstUpperChar = (char) => char.charAt(0).toUpperCase()
+
 export const getTemperaturesJSON = (name, inputs) => {
   if (!name) {
     return false
@@ -70,9 +72,15 @@ export const getTemperaturesJSON = (name, inputs) => {
   const newState = { ...inputs }
   delete newState[name]
 
-  Object.keys(newState).forEach((key) => {
-    newState[key] = newState[key].value
-  })
+  const json = Object.fromEntries(
+    Object.entries(newState).map(([key, val]) => {
+      const newKey = getFirstUpperChar(key)
+      // if not Kelvin temperature, return value with notation key
+      const newValue = newKey !== 'K' ? val.value + newKey : val.value
 
-  return JSON.stringify(newState)
+      return [newKey, newValue]
+    }),
+  )
+
+  return JSON.stringify(json, null, 2) // spacing level = 2
 }
