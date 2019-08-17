@@ -16,7 +16,7 @@ export const getMoves = (slabs) => {
 
 export const validateInput = (value) => {
   const input = Number.parseInt(value, 10)
-  if ((Number.isNaN(input) && input) || input > 8 || input < 3) {
+  if ((Number.isNaN(input) && value !== '') || input > 8 || input < 3) {
     return false
   }
 
