@@ -20,4 +20,18 @@ export const data = {
       },
     },
   ],
+  players: [
+    {
+      title: 'First player. Input value in range between 0.1 and 0.3.',
+      values: {
+        name: 'first',
+      },
+    },
+    {
+      title: 'Second player. Input value in range between 0.1 and 0.3.',
+      values: {
+        name: 'second',
+      },
+    },
+  ],
 }
