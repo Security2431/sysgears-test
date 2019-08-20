@@ -15,8 +15,15 @@ const Form = ({ inputs, output, handleInputChange }) => (
         handleInputChange={handleInputChange}
       />
     ))}
-
-    {output && <Output>{output}</Output>}
+    <br />
+    {output && (
+      <Output>
+        {Array.isArray(output)
+          ? // eslint-disable-next-line react/no-array-index-key
+          output.map((item, index) => <p key={`output-${index}`}>{item}</p>)
+          : output}
+      </Output>
+    )}
   </>
 )
 
@@ -32,7 +39,7 @@ Form.propTypes = {
     }),
   ).isRequired,
   handleInputChange: PropTypes.func.isRequired,
-  output: PropTypes.string,
+  output: PropTypes.oneOfType([PropTypes.string, PropTypes.arrayOf(PropTypes.string)]),
 }
 
 Form.defaultProps = {
