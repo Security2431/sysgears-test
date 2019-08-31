@@ -1,0 +1,476 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+/// <summary>
+/// ДНК с фиксацией
+/// </summary>
+public class DNA
+{
+    public bool Locked;
+    public int Value;
+
+    public override string ToString()
+    {
+        return "{Value}->{Locked}";
+    }
+}
+
+public class PaymentsState
+{
+    public enum InitPayments
+    {
+        ForOffspring,
+        ForHighway,
+        ForDriver,
+    }
+
+    private readonly Random _random;
+
+    public List<DNA> Payments { get; private set; }
+    public int Overpayment { get; private set; }//Fitness
+
+    //ctor
+    public PaymentsState(Random random, InitPayments init = InitPayments.ForOffspring)
+    {
+
+        _random = random;
+
+        Payments = new List<DNA>(10);
+        if (init == InitPayments.ForHighway)
+        {
+            GetPaymentsForHighway();
+        }
+        else if (init == InitPayments.ForDriver)
+        {
+            GetPaymentsForDriver();
+        }
+        else
+        { }
+    }
+
+    /// <summary>
+    /// Заполнение списка оплат для Водителя
+    /// все типы монет 1..10 предствлены в отдном экземпляре
+    /// в случайном порядке
+    /// </summary>
+    private void GetPaymentsForDriver()
+    {
+        var values = Enumerable.Range(1, 10).OrderBy(n => _random.Next(1, 10))
+                                                          .ToList();
+
+        //заполняем список
+        foreach (var val in values)
+            Payments.Add(new DNA { Value = val, Locked = false });
+    }
+
+    /// <summary>
+    /// Создание списка оплат для Автострады
+    /// </summary>
+    /// <returns></returns>
+    private void GetPaymentsForHighway()
+    {
+        //сгенирируем массив из десяти чисел от 1 до 10 рассположенных в случ.порядке
+        // List<int> values = Enumerable.Range(1, 10).OrderBy(n => _random.Next(1, 10))
+        //                                   .ToList();
+        var values = new List<int>{7, 8, 9, 9, 10, 6, 2, 4, 5, 1};
+        //скорректируем под требование суммы
+        // int sum = 0;
+        // do
+        // {
+        //     var index = _random.Next(0, 8);
+        //     //просто копируем соседний элемент
+        //     values[index] = values[index + 1];
+
+        //     sum = values.Sum();
+
+        // } while (sum <= 55);
+
+        //заполняем список
+        foreach (var val in values)
+            Payments.Add(new DNA { Value = val, Locked = false });
+    }
+
+    /// <summary>
+    /// Подсчет переплаты на основании переданного списка оплат
+    /// </summary>
+    /// <param name="paymentPoints">список оплат у автотрассы</param>
+    /// <returns>значение переплаты</returns>
+    public int CalcOverpayment(List<DNA> highwayPayments)
+    {
+        if (highwayPayments.Count == 0) return 0;
+
+        for (int i = 0; i < highwayPayments.Count; i++)
+        {
+            // Console.WriteLine($"Payments[i].Locked = {Payments[i].Locked}");
+            //если это ранее уже зафиксированный ген,
+            //то пропускаем его
+            
+            if (Payments[i].Locked) continue;
+
+            int val = highwayPayments[i].Value - Payments[i].Value;
+            //в случае равенства (самая выгодная оплата) 
+            if (val == 0)
+            {
+                Payments[i].Locked = true; // фиксируем эту ДНК
+            }
+            else if (val < 0)
+            {
+                //В случае, если ее номинал выше, чем стоимость проезда,
+                //водитель сдачу не получает и остаток сгорает.
+                Overpayment += Math.Abs(val);
+            }
+            else // в случае полож.остатка он идет в долг, т.е. все равно в переплату
+            {
+                Overpayment += val;
+            }
+        }
+
+        return Overpayment;
+    }
+
+    /// <summary>
+    /// Скрещивание с другим геном и получение потомка
+    /// </summary>
+    /// <param name="secondParent">другой PaymentState</param>
+    /// <returns></returns>
+    public PaymentsState Crossover(PaymentsState secondParent)
+    {
+        if (secondParent == null) throw new ArgumentNullException();
+
+        //Здесь сложное наследование, т.к. каждая
+        //монета должна быть представлена единожды и обязательно
+        //т.е. если берем от мамы в позиции 1 монету 10,
+        //то у папы мы уже не можем взять монету с этим же достоинством 10
+
+        //словарь для хранения использованных достоинств монет
+        Dictionary<int, bool> usedCoins = Enumerable.Range(1, 10)
+                                                    .ToDictionary(n => n, n => false);
+                                                    
+
+        //теперь у потомка должны быть гены от обоих родителей
+        //зафиксированные гены должны занять те же самые позиции и значение
+        //незафиксированные гены должны взять значение из словаря достоинств монет
+        List<DNA> offspringPayments = Enumerable.Range(1, 10).Select(n => new DNA { Value = 0 })
+                                                             .ToList();
+
+        //определим у мамы(this) зафиксированные ДНК, 
+        //т.е. те, кот. не следует изменять
+        var motherLockedDNAs = Payments.Where(p => p.Locked == true);
+
+        //пробежимся по ним и включим их в словарь использованных монет
+        //и добавим их в список для потомка
+        foreach (DNA locked in motherLockedDNAs)
+        {
+                            // Console.WriteLine($"(.)_(.) = {locked.Locked}");
+
+            int index = Payments.IndexOf(locked);
+            offspringPayments[index] = locked;
+
+            //отмечаем использование монеты
+            usedCoins[locked.Value] = true;
+        }
+
+
+        //определим у папы(secondParent) тоже
+        var fatherLockedDNAs = secondParent.Payments.Where(p => p.Locked == true);
+        foreach (DNA locked in fatherLockedDNAs)
+        {
+            //определим индекс который занимает
+            int index = secondParent.Payments.IndexOf(locked);
+                                                // Console.WriteLine($"(.)_(.) ============================={index}");
+
+
+            //если у матери такой монеты не было,
+            //и этот индекс еще свободен
+            if (!usedCoins[locked.Value] && offspringPayments[index].Value == 0)
+            {
+                offspringPayments[index] = locked;
+
+                usedCoins[locked.Value] = true;
+            }
+        }
+
+        //теперь нужно заполнить оставшиеся гены
+        foreach (var payment in offspringPayments)
+        {
+            if (payment.Value == 0)
+            {
+                int val = usedCoins.First(kv => kv.Value == false).Key;
+                // Console.WriteLine($"???????{usedCoins.First(kv => kv.Value == false)}");
+                
+                payment.Value = val;
+
+                usedCoins[val] = true;
+            }
+        }
+        
+        Console.WriteLine($"???????usedCoins[1] = {usedCoins[1]}");
+        Console.WriteLine($"???????usedCoins[2] = {usedCoins[2]}");
+        Console.WriteLine($"???????usedCoins[3] = {usedCoins[3]}");
+        Console.WriteLine($"???????usedCoins[4] = {usedCoins[4]}");
+        Console.WriteLine($"???????usedCoins[5] = {usedCoins[5]}");
+        Console.WriteLine($"???????usedCoins[6] = {usedCoins[6]}");
+        Console.WriteLine($"???????usedCoins[7] = {usedCoins[7]}");
+        Console.WriteLine($"???????usedCoins[8] = {usedCoins[8]}");
+        Console.WriteLine($"???????usedCoins[9] = {usedCoins[9]}");
+        Console.WriteLine($"???????usedCoins[10] = {usedCoins[10]}");
+                Console.WriteLine($"-------------------------------------------------------------------------------");
+
+        Console.WriteLine($"???????offspringPayments[0] = {offspringPayments[0].Value}");
+        Console.WriteLine($"???????offspringPayments[1] = {offspringPayments[1].Value}");
+        Console.WriteLine($"???????offspringPayments[2] = {offspringPayments[2].Value}");
+        Console.WriteLine($"???????offspringPayments[3] = {offspringPayments[3].Value}");
+        Console.WriteLine($"???????offspringPayments[4] = {offspringPayments[4].Value}");
+        Console.WriteLine($"???????offspringPayments[5] = {offspringPayments[5].Value}");
+        Console.WriteLine($"???????offspringPayments[6] = {offspringPayments[6].Value}");
+        Console.WriteLine($"???????offspringPayments[7] = {offspringPayments[7].Value}");
+        Console.WriteLine($"???????offspringPayments[8] = {offspringPayments[8].Value}");
+        Console.WriteLine($"???????offspringPayments[9] = {offspringPayments[9].Value}");
+
+        
+
+
+        //готовим потомока
+        var offspring = new PaymentsState(_random, InitPayments.ForOffspring);
+        foreach (var payment in offspringPayments)
+            offspring.Payments.Add(payment);
+
+        return offspring;
+    }
+
+    /// <summary>
+    /// Мутирование гена
+    /// </summary>
+    /// <param name="mutationRate"></param>
+    public void Mutate(double mutationRate)
+    {
+        //Сложное мутирование, т.к. каждое достоинстово монеты
+        //должно быть обязательно и один раз
+
+        for (int i = 0; i < Payments.Count; i++)
+        {
+            //если это ранее уже зафиксированный ген,
+            //то пропускаем его
+            if (Payments[i].Locked) continue;
+
+            if (_random.NextDouble() < mutationRate)
+            {
+                //запоминаем монету
+                int coinInner = Payments[i].Value;
+                //новое случайное значение монеты
+                int coinRandomValue = _random.Next(1, 10);
+
+                //находим ген монеты с таким же значением
+                DNA dna = Payments.First(p => p.Value == coinRandomValue);
+                //если этот ген имеет статус зафиксированного
+                //то ничего с ним делать не будем
+                if (dna.Locked) continue;
+
+                //находим индекс этого гена
+                int index = Payments.IndexOf(dna);
+
+                //запоминаем по этому индексу новый ген
+                Payments[index] = new DNA { Value = coinInner };
+                //а по текущему индексу полученную из случайного знач.
+                Payments[i] = dna;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Автотрасса
+/// </summary>
+public class Highway
+{
+    private readonly Random _random;
+    private readonly PaymentsState _paymentsState;
+
+    //ctor
+    public Highway(Random random)
+    {
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+
+        _paymentsState = new PaymentsState(_random, PaymentsState.InitPayments.ForHighway);
+    }
+
+    public List<DNA> Payments => _paymentsState.Payments;
+
+    public int PaymentSum => Payments.Select(p => p.Value).Sum();
+
+    public int MinOverpayment => PaymentSum - 55;
+
+}
+
+public class PaymentGeneticAlgorithm
+{
+    private readonly Random _random;
+    private List<PaymentsState> _tmpNewPopulation = new List<PaymentsState>();
+    private PaymentsState _bestPaymentsState; //лучшая позиция
+
+    public List<PaymentsState> Population { get; set; } = new List<PaymentsState>();
+    public int Generation { get; private set; } //номер поколения
+    public double MutationRate { get; private set; } //коэффициент мутации
+
+    //ctor
+    public PaymentGeneticAlgorithm(Random random, int populationSize, double mutationRate = 0.5)
+    {
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+        MutationRate = mutationRate;
+
+        for (int i = 0; i < populationSize; i++)
+        {
+            Population.Add(new PaymentsState(_random, PaymentsState.InitPayments.ForDriver));
+        }
+
+        //в первый раз у нас лучшим будет просто первый
+        _bestPaymentsState = Population[0];
+    }
+
+    //--
+
+    public int BestOverpayment => _bestPaymentsState.Overpayment; //значение лучшей переплаты
+
+    public List<int> BestPayments => _bestPaymentsState.Payments.Select(p => p.Value).ToList(); //лучшие оплаты
+
+    //--
+
+    /// <summary>
+    /// Создание нового поколения популяции
+    /// </summary>
+    /// <param name="highwayPayments"></param>
+    public void CreateNewGeneration(List<DNA> highwayPayments)
+    {
+        //проверка входных данных
+        if (highwayPayments == null) throw new ArgumentNullException(nameof(highwayPayments)); 
+        if (highwayPayments.Count <= 0) return;
+        if (Population.Count <= 0) return;
+
+        //выбор из популяции наиболее пригодного экземпляра
+        _bestPaymentsState = CalculateFitness(highwayPayments);
+        
+
+        //готовим новую популяцию
+        _tmpNewPopulation.Clear();
+
+        //будем скрещивать лучшего с оставшемися в популяции
+        for (int i = 0; i < Population.Count; i++)
+        {
+            //выбор родителя
+            var parent = Population[i];
+            //производим наследование или скрещивание
+            var child = _bestPaymentsState.Crossover(parent);
+            //подвергнем потомка мутации
+            child.Mutate(MutationRate);
+            //вносим потомка в новую коллекцию
+            _tmpNewPopulation.Add(child);
+        }
+
+        //заменяем старую популяцию на новую
+        var tmpList = Population;
+        Population = _tmpNewPopulation;
+        _tmpNewPopulation = tmpList;
+        //увеличиваем счетчик поколений
+        Generation++;
+    }
+
+    /// <summary>
+    /// Проверка текущего поколения на пригодность
+    /// Выявление лучшего гена наиболее подходящего под образец
+    /// </summary>
+    private PaymentsState CalculateFitness(List<DNA> highwayPayments)
+    {
+        var best = _bestPaymentsState;
+        
+        // Console.WriteLine($"########{best.Overpayment}");
+
+        for (int i = 0; i < highwayPayments.Count; i++)
+        {
+            var fitness = Population[i].CalcOverpayment(highwayPayments);
+            // Console.WriteLine($"fitness===============-----------------------------------{fitness}");
+
+            //если переплата меньше, берем этот вариант
+            if (fitness < best.Overpayment)
+                best = Population[i];
+        }
+
+        return best;
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        Console.WriteLine("==Программа планирования платежей==");
+        Console.WriteLine();
+
+
+
+        var random = new Random();
+        var populationSize = 100;
+        var mutationRate = 0.2;
+
+        var highway = new Highway(random);
+        var pga = new PaymentGeneticAlgorithm(random, populationSize, mutationRate);
+
+        Console.WriteLine("Текущая ситуация на трассе");
+        PrintHighway(highway);
+        Console.WriteLine();
+        Console.WriteLine("Для начала расчета нажмите любую клавишу");
+        Console.ReadKey(true);
+
+        do
+        {
+            pga.CreateNewGeneration(highway.Payments.ToList());
+            Console.WriteLine("Трасса");
+            PrintHighway(highway);
+            Console.WriteLine("Платежи");
+            PrintBestGenes(pga.BestPayments);
+            Console.WriteLine($"Поколение: {pga.Generation}, Переплата: {pga.BestOverpayment}");
+            Console.WriteLine(new string('-', 80));
+            Console.WriteLine();
+
+            //Thread.Sleep(700);
+            if (pga.Generation > 1000) break;
+
+        } while (pga.BestOverpayment > highway.MinOverpayment);
+
+
+        Console.ReadKey();
+    }
+
+    private static void PrintBestGenes(IEnumerable<int> bestGenes)
+    {
+        var payments = bestGenes.ToList();
+        var names = Enumerable.Range('A', payments.Count).ToList();
+
+        Console.Write("|");
+        Console.Write(new string('=', 5));
+        for (int i = 0; i < payments.Count; i++)
+        {
+            Console.Write($"[{(char)names[i]}:${payments[i]}]");
+            Console.Write(new string('=', 3));
+        }
+        Console.Write(new string('=', 2));
+        Console.WriteLine("|");
+    }
+
+    private static void PrintHighway(Highway highway)
+    {
+        var payments = highway.Payments.ToList();
+        var names = Enumerable.Range('A', payments.Count).ToList();
+
+        Console.WriteLine($"Общая сумма оплаты: {highway.PaymentSum}, минимально возможная переплата: {highway.MinOverpayment}");
+
+        Console.Write("|");
+        Console.Write(new string('=', 5));
+        for (int i = 0; i < payments.Count; i++)
+        {
+            Console.Write($"[{(char)names[i]}:${payments[i].Value}]");
+            Console.Write(new string('=', 3));
+        }
+        Console.Write(new string('=', 2));
+        Console.WriteLine("|");
+    }
+}
