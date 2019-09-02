@@ -44,11 +44,12 @@ class PaymentsState {
   // Создание списка оплат для Автострады
   setPaymentsForHighway = () => {
     // сгенирируем массив из десяти чисел от 1 до 10 рассположенных в случ.порядке
-    const values = this.getRandomValues()
+    let values = this.getRandomValues()
 
     // скорректируем под требование суммы
     let sum = 0
-    while (sum <= 55) {
+    while (sum < 55) {
+      values = this.getRandomValues()
       const index = this.randomInteger(0, 8)
       // просто копируем соседний элемент
       values[index] = values[index + 1]
