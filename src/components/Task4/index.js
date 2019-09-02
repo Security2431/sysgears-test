@@ -2,6 +2,7 @@ import React from 'react'
 import { Container } from 'react-bootstrap'
 
 import Navigation from '../Navigation'
+import Solution from './Solution'
 
 const Task4 = () => (
   <>
@@ -56,6 +57,7 @@ const Task4 = () => (
         </details>
       </Container>
     </section>
+    <Solution />
   </>
 )
 

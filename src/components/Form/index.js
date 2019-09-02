@@ -1,3 +1,4 @@
+/* eslint-disable react/no-array-index-key */
 import React from 'react'
 import PropTypes from 'prop-types'
 
@@ -19,8 +20,7 @@ const Form = ({ inputs, output, handleInputChange }) => (
     {output && (
       <Output>
         {Array.isArray(output)
-          ? // eslint-disable-next-line react/no-array-index-key
-          output.map((item, index) => <p key={`output-${index}`}>{item}</p>)
+          ? output.map((item, index) => <p key={`output-${index}`}>{item}</p>)
           : output}
       </Output>
     )}
